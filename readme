@@ -1,0 +1,90 @@
+1、如果目录下没有yang_modules这个文件
+   运行  
+         python3 yang_rfc.py ./bgp/
+
+ 2、如果目录下有yang_modules这个文件
+    直接运行
+         python3 yang_rfc.py
+ 3、如果想重新生成yang_modules这个文件
+         运行1、的内容
+ 如openconfig-bgp运行后出现
+ Choice Modeule Name: ['ietf-netconf', 'openconfig-bgp-policy', 'openconfig-inet-types', 'openconfig-bgp-types', 'openconfig-policy-types', 'openconfig-types', 'openconfig-yang-types', 'ietf-inet-types', 'ietf-yang-types', 'ietf-interfaces', 'openconfig-interfaces', 'openconfig-extensions', 'openconfig-bgp', 'openconfig-routing-policy']
+module >openconfig-bgp （输入opeconfig-bgp）
+ 出现生成的代码和openconfig-bgp>
+ openconfig-bgp>*
+ 看yang contianer,list,leaf,leaf-list,... tree
+ 
+ 4、在openconfig-bgp>*后会出现
+.......
+                ├ container use-multiple-paths ->-6438312242391315966
+                    ├ container config ->4874438011303423425
+                        ├ leaf enabled ->-8644924308082446906
+                    ├ container state
+                        ├ config false
+                        ├ leaf enabled
+                    ├ container ebgp ->-73683027755021457
+                        ├ container config ->6271267819966798184
+                            ├ leaf allow-multiple-as ->201404358886246952
+                            ├ leaf maximum-paths ->-7024144332218161246
+                        ├ container state
+                            ├ config false
+                            ├ leaf allow-multiple-as
+                            ├ leaf maximum-paths
+                    ├ container ibgp ->-2251363372557777736
+                        ├ container config ->2237497577408369645
+                            ├ leaf maximum-paths ->8891077290169949704
+                        ├ container state
+                            ├ config false
+                            ├ leaf maximum-paths
+                ├ container apply-policy ->-3688259472857241272
+                    ├ container config ->-542825605681862353
+                        ├ leaf-list import-policy ->202389048834029177
+                        ├ leaf default-import-policy ->1581993182980904389
+                        ├ leaf-list export-policy ->-2822994043534005579
+                        ├ leaf default-export-policy ->8128682493600742992
+                    ├ container state
+                        ├ config false
+                        ├ leaf-list import-policy
+                        ├ leaf default-import-policy
+                        ├ leaf-list export-policy
+                        ├ leaf default-export-policy
+......
+操作(copy paste -3688259472857241272)
+openconfig-bgp>-3688259472857241272         
+输出：
+/openconfig-bgp>-3688259472857241272
+
+├ container apply-policy ->-3688259472857241272
+    ├ container config ->-542825605681862353
+        ├ leaf-list import-policy(path /openconfig-routing-policy:routing-policy/openconfig-routing-policy:policy-definitions/openconfig-routing-policy:policy-definition/openconfig-routing-policy:name) ->202389048834029177
+            ├ path_point (/openconfig-routing-policy:routing-policy/openconfig-routing-policy:policy-definitions/openconfig-routing-policy:policy-definition[{}]/openconfig-routing-policy:config/openconfig-routing-policy:name)
+                ├ type string
+            ├ ordered-by user
+        ├ leaf default-import-policy ->1581993182980904389
+            ├ type default-policy-type
+                ├ type enumeration
+                    ├ enum ACCEPT_ROUTE
+                    ├ enum REJECT_ROUTE
+            ├ default REJECT_ROUTE
+        ├ leaf-list export-policy(path /openconfig-routing-policy:routing-policy/openconfig-routing-policy:policy-definitions/openconfig-routing-policy:policy-definition/openconfig-routing-policy:name) ->-2822994043534005579
+            ├ path_point (/openconfig-routing-policy:routing-policy/openconfig-routing-policy:policy-definitions/openconfig-routing-policy:policy-definition[{}]/openconfig-routing-policy:config/openconfig-routing-policy:name)
+                ├ type string
+            ├ ordered-by user
+        ├ leaf default-export-policy ->8128682493600742992
+            ├ type default-policy-type
+                ├ type enumeration
+                    ├ enum ACCEPT_ROUTE
+                    ├ enum REJECT_ROUTE
+            ├ default REJECT_ROUTE
+
+<Node>:
+  oc-bgp:bgp/oc-bgp:peer-groups/oc-bgp:peer-group[{}]/oc-bgp:apply-policy
+<SubNode>:
+  oc-bgp:config/oc-bgp:import-policy[{}]
+  oc-bgp:config/oc-bgp:default-import-policy
+  oc-bgp:config/oc-bgp:export-policy[{}]
+  oc-bgp:config/oc-bgp:default-export-policy
+/openconfig-bgp>
+
+5、now use xpath2xml build xml
+                         
