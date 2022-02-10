@@ -1,21 +1,16 @@
 
-1、如果目录下没有yang_modules这个文件
-   运行  
-         python3 yang_rfc.py ./bgp/
-
- 2、如果目录下有yang_modules这个文件
-    直接运行
-         python3 yang_rfc.py
- 3、如果想重新生成yang_modules这个文件
-         运行1、的内容
- 如openconfig-bgp运行后出现
+ 1.   run  
+         python3 yang_rfc.py ./bgp/ (generate yang_modules file)
+         python3 yang_rfc.py  (If there are yang_modules file in the directory)   
+ 2. out
  Choice Modeule Name: ['ietf-netconf', 'openconfig-bgp-policy', 'openconfig-inet-types', 'openconfig-bgp-types', 'openconfig-policy-types', 'openconfig-types', 'openconfig-yang-types', 'ietf-inet-types', 'ietf-yang-types', 'ietf-interfaces', 'openconfig-interfaces', 'openconfig-extensions', 'openconfig-bgp', 'openconfig-routing-policy']
-module >openconfig-bgp （输入opeconfig-bgp）
- 出现生成的代码和openconfig-bgp>
+module >openconfig-bgp
+ (yang contianer,list,leaf,leaf-list,... tree)
  openconfig-bgp>*
- 看yang contianer,list,leaf,leaf-list,... tree
  
- 4、在openconfig-bgp>*后会出现
+ 
+ 3、openconfig-bgp>*
+.......
 .......
                 ├ container use-multiple-paths ->-6438312242391315966
                     ├ container config ->4874438011303423425
@@ -50,9 +45,8 @@ module >openconfig-bgp （输入opeconfig-bgp）
                         ├ leaf-list export-policy
                         ├ leaf default-export-policy
 ......
-操作(copy paste -3688259472857241272)
+(copy paste -3688259472857241272)
 openconfig-bgp>-3688259472857241272         
-输出：
 /openconfig-bgp>-3688259472857241272
 
 ├ container apply-policy ->-3688259472857241272
@@ -86,6 +80,6 @@ openconfig-bgp>-3688259472857241272
   oc-bgp:config/oc-bgp:export-policy[{}]
   oc-bgp:config/oc-bgp:default-export-policy
 /openconfig-bgp>
-
-5、now use xpath2xml build xml
+([{}] is list or leaf-list)
+4、now use xpath2xml build xml
                          
