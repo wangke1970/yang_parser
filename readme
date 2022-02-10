@@ -81,5 +81,18 @@ openconfig-bgp>-3688259472857241272
   oc-bgp:config/oc-bgp:default-export-policy
 /openconfig-bgp>
 ([{}] is list or leaf-list)
-4、now use xpath2xml build xml
+
+4、input namespaces
+/openconfig-bgp>namespaces 
+Show Module Prefix :
+['openconfig-bgp']
+Namespaces in yang module :
+{'openconfig-bgp': 'http://openconfig.net/yang/bgp'}
+Module name to prefix :
+{'openconfig-bgp': 'oc-bgp'}
+Add namespace yang nc if need :
+{'yang':'urn:ietf:params:xml:ns:yang:ietf-yang-types','nc':'urn:ietf:params:xml:ns:netconf:base:1.0'}
+
+
+5、now use xpath2xml build xml
                          
