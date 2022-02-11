@@ -105,12 +105,12 @@ example_str_2 = 'nc:edit-config/nc:config/' + 'oc-bgp:bgp/oc-bgp:peer-groups/oc-
 bgp_x.add(example_str_1)
 bgp_x.add(example_str_2)
 #注意 oc-bgp:default-import-policy','oc-bgp:export-policy[0]','oc-bgp:export-policy[1]','oc-bgp:default-export-policy' 次序先入的node先生成xml 
-bgp_x.append(example_str_1,'oc-bgp:import-policy[0]')
-bgp_x.append(example_str_1,'oc-bgp:import-policy[1]')
+bgp_x.insert(example_str_1,'oc-bgp:import-policy[0]')
+bgp_x.insert(example_str_1,'oc-bgp:import-policy[1]')
 
-bgp_x.extend(example_str_1,['oc-bgp:default-import-policy','oc-bgp:export-policy[0]','oc-bgp:export-policy[1]','oc-bgp:default-export-policy'])
-bgp_x.append(example_str_2,'oc-bgp:import-policy[0]')
-bgp_x.extend(example_str_2,['oc-bgp:default-import-policy','oc-bgp:export-policy[0]','oc-bgp:default-export-policy'])
+bgp_x.inserts(example_str_1,['oc-bgp:default-import-policy','oc-bgp:export-policy[0]','oc-bgp:export-policy[1]','oc-bgp:default-export-policy'])
+bgp_x.insert(example_str_2,'oc-bgp:import-policy[0]')
+bgp_x.inserts(example_str_2,['oc-bgp:default-import-policy','oc-bgp:export-policy[0]','oc-bgp:default-export-policy'])
 print(bgp_x.xml)
 tree = bgp_x.tree
 ss = tree.dump
