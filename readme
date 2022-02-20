@@ -140,6 +140,8 @@ nc:rpc
                              ├ oc-bgp:export-policy
                              ├ oc-bgp:default-export-policy
 
-
-
+6、find node
+/huawei-mac>find(container global-attribute)
+H:-5640491272284131244 ➔ P:/huawei-mac:mac/huawei-mac:global-attribute
+/huawei-mac>
 
