@@ -66,7 +66,6 @@ def uses_grouping_stmt(node):
         for i in node.children:
             if i.type_name == 'uses' and ':' not in i.leaf:
                 ret = find_grouping_backward(i)                
-#                i.parents = None
                 #refine-stmt extend
                 for ii in i.children:
                     if ii.type_name == 'when':
@@ -74,10 +73,6 @@ def uses_grouping_stmt(node):
                         ii.children = ret
                         break
                 ll = i.children
-#                ll = copy.deepcopy(i.children)
-#                if tp:
-#                    node_when = yang_yacc_rfc.node('_uses_when',tp.leaf,ret)
-#                    node.children.append(node_when)
                 node.children.extend(ll)
                 node.children.extend(ret)
                 node.children.remove(i)
@@ -92,7 +87,6 @@ def find_grouping_backward(node):
     state = 1
     node_tp = node.parents
     while state:
-#        utils.preorder_add_parents(node)
         for i in node_tp.children:
             if i.type_name == 'grouping' and i.leaf == node.leaf:
                 tp = i.parents
@@ -118,11 +112,14 @@ def uses_grouping_stmt_otherfile(node):
                 try:
                     dd = grouping_node_dict(modules[ret[0]].children)
                 except Exception as e:
-                    print('Error Lose file prefix is :',e)
+                    print('Error Lose file :',e,'.yang')
                     exit(0)                  
-                group_tp = dd[ret[1]]
+                try:
+                    group_tp = dd[ret[1]]
+                except Exception as e:
+                    print('Error Lose grouping node :',ret[1],ret[0]+'.yang')
+                    exit(0)
                 l = copy.deepcopy(group_tp)
-#                i.parents = None
                 # uses node children when node 
                 for ii in i.children:
                     if ii.type_name == 'when':
@@ -157,15 +154,14 @@ def find_path(node):
     else:
         return l.pop()
 
-# find node by node_name only one level
-def find_node_list(node_name,node_list):
+def _find_node_list(node_name,node_list,prefix_name):
     for i in node_list:
-        if node_name == i.leaf and i.type_name in ('container','leaf','list','leaf-list','identity','anyxml','identityref','anydata','rpc','input','output','action'):
+        if node_name == i.leaf and i.type_name in ('container','leaf','list','leaf-list','identity','anyxml','identityref','anydata','rpc','input','output','action') and i.prefix==prefix_name:
             return i
         elif i.type_name =='choice':
-            gg = utils.preorder_iter(i)
+            gg = utils.levelorder_iter(i)
             for ii in gg:
-                if node_name == ii.leaf and ii.type_name in ('container','leaf','list','leaf-list','identity','anyxml','anydata','rpc','input','output','action'):
+                if node_name == ii.leaf and ii.type_name in ('container','leaf','list','leaf-list','identity','anyxml','anydata','rpc','input','output','action') and ii.prefix==prefix_name:
                     return ii
         else:
             continue
@@ -177,14 +173,13 @@ def find_node_list_augment(node_name,node_list):
         if node_name == i.leaf and i.type_name in ('container','leaf','list','leaf-list','identity','anyxml','anydata','choice','case','rpc','input','output','action','notification'):
             return i
         elif i.type_name =='choice':
-            gg = utils.preorder_iter(i)
+            gg = utils.levelorder_iter(i)
             for ii in gg:
                 if node_name == ii.leaf and ii.type_name in ('container','leaf','list','leaf-list','identity','anyxml','anydata','rpc','input','output','action'):
                     return ii
         else:
             continue
     return None
-              
 
 def find_descendant_schema_node(node):
     node_tp = node.parents
@@ -204,74 +199,68 @@ def find_descendant_schema_node(node):
     
 # path ../../../a/b/c 
 def find_relative_path_node(node):
-    augment_state = False
     node_tp = node
-    node_path = node.leaf
-    path_list = []
-    tpl = []
 #    if node.leaf == "../../../../../huawei-l2vpn:ldp-signaling/huawei-l2vpn:pws/huawei-l2vpn:pw/huawei-l2vpn:negotiation-vc-id":
 #        print("bbbbb")
-    if '../' in node_path:
+#    if node.leaf == '../../../../interfaces/interface/name':
+#    if node.leaf ==  '../../../../vlan-groups/vlan-group/id':
+#        print('ccc')
+    if '../' in node.leaf:
         l = node_tp.leaf.split('/')
         # jump out leafref         
         node_tp = node_tp.parents
         node_tp = node_tp.parents        
         for j in l:
-            if j == '..':
-                if augment_state == False:
+            # jump out case choice
+            while True:
+                if node_tp.type_name in ('case','choice'):
                     node_tp = node_tp.parents
-                    if node_tp.type_name == 'augment':
-                        augment_state = True
-                        augment_path = node_tp.leaf.split('/')
-                        augment_path = list(filter(None,augment_path))
-                        
-                    # jump out case choice
-                    while True:
-                        if node_tp.type_name in ('case','choice'):
-                            node_tp = node_tp.parents
-                        else:
-                            break
+                elif node_tp.type_name=='type' and node_tp.leaf == 'union':
+                    node_tp = node_tp.parents
                 else:
-                    tp = augment_path.pop(-1)
-                    tpl.insert(0,tp)
-                continue
+                    break
+            if j == '..':
+                node_tp = node_tp.parents
             else:
-                if augment_state:
-                    augment_path.append(j)
-                else:    
-                    if ':' in j:
-                        j = j.split(':')[1]                    
-                    node_tp = find_node_list(j,node_tp.children)
+                if ':' in j:
+                    prefix_name,node_name = j.split(':')                   
+                    node_tp = _find_node_list(node_name,node_tp.children,prefix_name)
+                else:
+                    node_tp = _find_node_list(j,node_tp.children,node_tp.prefix)
                 if node_tp == None:
-                    print("../../../ .... path error",j,node.module_name())
                     return None
-        if augment_state:
-            string_path = '/'
-            node.leaf = string_path + string_path.join(augment_path)
-#            p = r'(/' + j.split(':')[0] + r'\:[_A-Za-z][._\-A-Za-z0-9\|]*' + r')+'
-#            s = re.search(p,node.leaf)
-#            if s:
-#                node.leaf = s.group()
-            node_augment = find_absolute_path_node(node.leaf,augment_path[-1].split(':')[0])
-            return node_augment    
     return node_tp         
     
 
-def find_augment_path_node(node_path):
+def find_augment_path_node(node_path,prefix):
 #    if node_path == '/openconfig-interfaces:interfaces/openconfig-interfaces:interface/openconfig-interfaces:subinterfaces/openconfig-interfaces:subinterface/openconfig-if-ip:ipv6/openconfig-if-ip:addresses/openconfig-if-ip:address':
 #        print('aaaa')
 #    if node_path == '/openconfig-interfaces:interfaces/openconfig-interfaces:interface/openconfig-interfaces:subinterfaces/openconfig-interfaces:subinterface':
 #        print('aaaa')
 
-    if '/' in node_path and ':' in node_path:
+    identifier = r'[_A-Za-z][._\-A-Za-z0-9]*'
+    node_steps = r'(/' + identifier + r':' + identifier + r')+'
+    prefix_str = re.match(node_steps,node_path).group()
+    if prefix_str == node_path:
         ret = node_path.split('/')[-1].split(':')[0]
-    try:
         node = modules[ret]
-    except Exception as e:
-        print('Error Lose file prefix is :',e)
-        exit(0)         
-    ret = '/' + ret + ':'
-    path_l = list(filter(None,node_path.split(ret)))
+        ret = '/' + ret + ':'
+        path_l = list(filter(None,node_path.split(ret)))
+#        path_l = node_path.split(ret)
+#        path_l.pop(0)
+    else:
+        node = modules[prefix]
+        path_local = node_path.replace(prefix_str,'')
+        path_l = list(filter(None,path_local.split('/')))
+        path_l.insert(0,prefix_str)
+#    if '/' in node_path and ':' in node_path:
+#        ret = node_path.split('/')[-1].split(':')[0]
+#    node = modules[ret]
+    #try:
+    #    node = modules[ret]
+    #except Exception as e:
+    #    print('Error Lose file prefix is :',e)
+    #    exit(0)         
     if ':' in path_l[0]:
         node_tp = None
         gg = utils.levelorder_iter(node)
@@ -287,16 +276,19 @@ def find_augment_path_node(node_path):
     else:
         node_tp = node
     if node_tp == None:
-        print('find_augment_path_node error in step 1:','[node]',i.leaf,'[in]',node_path)
+        print('find_augment_path_node error in step 1:','node_name:',i.leaf,'path:',node_path)
         return node_tp
     for i in path_l:
         node_tp = find_node_list_augment(i,node_tp.children)
         if node_tp == None:
-            print('find_augment_path_node error in step 2:','[node]',i,'[in]',node_path)
+            print('find_augment_path_node error in step 2:','node_name:',i,'path:',node_path)
             return node_tp
     return node_tp            
-        
-def find_absolute_path_node(node_path,module_name):
+
+"""        
+def __find_absolute_path_node(node_path,module_name):
+    if node_path == '/ietf-network-instance:network-instances/ietf-network-instance:network-instance/ietf-l2vpn:type':
+        print('aaa')
     if '/' in node_path and ':' in node_path:
         ret = node_path.split('/')[-1].split(':')[0]
         node = modules[ret]
@@ -319,22 +311,52 @@ def find_absolute_path_node(node_path,module_name):
         else:
             continue
     if node_tp == None or node_tp.children == []:
-        print('error in find_absolute_path_node step 1')
+        print('error in find_absolute_path_node step 1',node_path,module_name)
+        return None
     for i in path_l[1:]:
         node_tp = find_node_list(i,node_tp.children)
         if node_tp == None:
             print('error in find_absolute_path_node in step 2:','node:',i,'node_path:',node_path)
             return node_tp
-    return node_tp       
+    return node_tp
+"""    
 
+def find_absolute_path_node(node_path,module_name):
+#    if node_path == '/ietf-interfaces:interfaces/ietf-interfaces:interface/ietf-if-extensions:encapsulation/ietf-if-flexible-encapsulation:flexible/ietf-if-flexible-encapsulation:match/ietf-if-flexible-encapsulation:dot1q-vlan-tagged/ietf-if-flexible-encapsulation:outer-tag/ietf-if-flexible-encapsulation:vlan-id':
+#        print('aaa')    
+#    if node_path == '/network-instances/network-instance/config/name':
+#        print('bbb')
+    path_l = list(filter(None,node_path.split('/')))
+    if ':' in path_l[0]:
+        node = modules[path_l[0].split(':',1)[0]]
+    else:
+        node = modules[module_name]
+    for i in path_l:
+        if ':' in i:
+            prefix_name,node_name = i.split(':',1)
+        else:
+            node_name = i
+            prefix_name = module_name
+        node = _find_node_list(node_name,node.children,prefix_name)
+        if node==None:
+            print('Error find node_name:',i,node_path)
+            return None
+    return node        
 
 def path_stmt_syntax(node,module_name):
-    if node.type_name == '_augment_when' or node.type_name == '_uses_when':
+#    if node.type_name=='augment':
+#        print('aaaa')
+    if node.type_name == '_augment_when' or node.type_name == '_uses_when' or node.type_name=='typedef'or node.type_name=='augment' or node.type_name=='deviation':
         return
-    if node.type_name == 'path':
+#    if node.type_name == 'path' and node.leaf == '/network-instances/network-instance/config/name':
+#        print('ccc')
+    elif node.type_name == 'path':
         node.leaf = node.leaf.lstrip()
         if '..' in node.leaf:
             node_tp = find_relative_path_node(node)
+            if node_tp == None:
+                print('find_relative_path_node error:',node.leaf,node.prefix)
+                return
             # path in path
             nn,ret_node = find_path(node_tp)
             while nn:
@@ -342,7 +364,8 @@ def path_stmt_syntax(node,module_name):
                     node_tp = find_relative_path_node(ret_node)
                     nn,ret_node = find_path(node_tp)
                 elif nn[0]=='/':
-                    node_module = ret_node.module_name()
+                    #node_module = ret_node.module_name()
+                    node_module = ret_node.prefix
                     node_tp = find_absolute_path_node(nn,node_module)
                     nn,ret_node = find_path(node_tp)
                 else:
@@ -362,17 +385,20 @@ def path_stmt_syntax(node,module_name):
                     break
         elif node.leaf[0]=='/':
             if ':' not in node.leaf:
-                module_name = node.module_name()
+                #module_name = node.module_name()
+                module_name = node.prefix
             node_tp = find_absolute_path_node(node.leaf,module_name)
             if node_tp == None:
-                print('find absolute path node error:',node.leaf)
+                #print('find absolute path node error:',node.leaf,node.prefix)
+                return
             nn,ret_node = find_path(node_tp)
             while nn:
                 if '..' in nn:
                     node_tp = find_relative_path_node(ret_node)
                     nn,ret_node = find_path(node_tp)
                 elif nn[0]=='/':
-                    node_module = ret_node.module_name()
+                    #node_module = ret_node.module_name()
+                    node_module = ret_node.prefix
                     node_tp = find_absolute_path_node(nn,node_module)
                     nn,ret_node = find_path(node_tp)
                 else:
@@ -392,14 +418,14 @@ def path_stmt_syntax(node,module_name):
                     break            
         else:
             pass
-    elif node.type_name != 'path' and node.children != []:
+    elif node.children != []:
         for i in node.children:
             path_stmt_syntax(i,module_name)
     else:
         return
     return 
 
-def get_augment_stmt_syntax(node):
+def augment_stmt_node(node):
     g = utils.levelorder_iter(node)
     global augment_list
     for i in g:
@@ -411,32 +437,33 @@ def augment_stmt_syntax():
     global augment_list
     augment_list.sort(key = lambda x:x[0])
     for i in augment_list:
-        node_tp = find_augment_path_node(i[1].leaf)
+        node_tp = find_augment_path_node(i[1].leaf,i[1].prefix)
         if node_tp:
             node_tp.children.extend(i[1].children)
-        else:
-            print('error find_augment_path_node:',i[1].leaf)
+#        else:
+#            print('error find_augment_path_node:',i[1].leaf)
         
 
-def augment_stmt_syntax_local(node,module_name):
-    l = []
+def augment_descendant_syntax(node,module_name):
+#    l = []
     g = utils.levelorder(node)
     for i in g:
-        ret = i.leaf.split('/'+ module_name + ':')
-        if i.type_name == 'augment'and i.leaf[0] == '/' and ret[0] == '':
-            l.append((len(ret),i))
-        elif i.type_name == 'augment' and i.leaf[0] != '/':
+#        ret = i.leaf.split('/'+ module_name + ':')
+#        if i.type_name == 'augment'and i.leaf[0] == '/' and ret[0] == '':
+#            l.append((len(ret),i))
+#        elif i.type_name == 'augment' and i.leaf[0] != '/':
+        if i.type_name == 'augment' and i.leaf[0] != '/':
             node_tp = find_descendant_schema_node(i)
             node_tp.children.extend(i.children)
         else:
             continue
-    l.sort(key = lambda x:x[0])
-    for i in l:
-        node_tp = find_augment_path_node(i[1].leaf)
-        if node_tp:
-            node_tp.children.extend(i[1].children)
-        else:
-            print('error find_augment_path_node:',i[1].leaf)
+#    l.sort(key = lambda x:x[0])
+#    for i in l:
+#        node_tp = find_augment_path_node(i[1].leaf)
+#        if node_tp:
+#            node_tp.children.extend(i[1].children)
+#        else:
+#            print('error find_augment_path_node:',i[1].leaf)
         
 def find_typedef_localfile(node):
     tp_node = node.parents
@@ -451,7 +478,7 @@ def find_typedef_localfile(node):
             else:
                 continue
         tp_node = tp_node.parents
-    print('Error Lose node:', 'typedef',node.leaf,'in',node.module_name())
+    print('Error Lose typedef node:',node.leaf,'in',node.module_name()+'.yang')
     return []
 
 def type_stmt_localfile(node):
@@ -483,8 +510,8 @@ def type_stmt_external(node,k):
                 try:
                     tp_node = modules[ret[0]]
                 except Exception as e:
-                    print('Error Lose file prefix is :',e)
-                    exit(0)
+                    print('Error Lose file :',e,'.yang')
+                    exit(1)
                 utils.preorder_remove_parents(tp_node)
                 for j in tp_node.children:
                     if j.type_name == 'typedef' and j.leaf == ret[1]:
@@ -501,8 +528,8 @@ def type_stmt_external(node,k):
                 try:
                     tp_node = modules[ret[0]]
                 except Exception as e:
-                    print('Error Lose file prefix is :',e)
-                    exit(0)
+                    print('Error Lose file :',e,'.yang')
+                    exit(1)
                 utils.preorder_remove_parents(tp_node)
                 for j in tp_node.children:
                     if j.type_name == 'typedef' and j.leaf == ret[1]:
@@ -575,6 +602,8 @@ def node_add_prefix(prefix_name,node):
     for i in gg:
         if i.type_name == 'module':
             continue
+        elif i.type_name == 'path' and ':' in i.parents.parents.leaf:
+            i.prefix = i.parents.parents.leaf.split(':',1)[0]
         else:
             i.prefix = prefix_name
             
@@ -783,8 +812,6 @@ class TreeNode(object):
                 return self.parent.parent
             else:
                 return None
-              
-        
 
 def add_root_tree_node():
     root = TreeNode('')
@@ -873,10 +900,6 @@ def handler(signum, frame):
 def yang_stmt_node(w_dir):
     #'description',
     remove_node = ('description','reference','import','include','revision','yang-version','organization','contact','belongs-to','prefix',None)
-#    remove_other_type = ('config','description','must','presence','reference','status','when','if-feature','key','max-elements','min-elements','ordered-by','status','unique','default','mandatory')
-    
-#    remove_node = ('reference','import','include','revision','yang-version','namespace','ext','organization','contact','belongs-to','prefix',None)    
-#    sys.setrecursionlimit(3000)
     d = create_data_all(w_dir)
     global prefix_module
     global modules
@@ -890,7 +913,7 @@ def yang_stmt_node(w_dir):
     modules_check_02 = set(tuple(list(chain.from_iterable(modules_check_02))))    
     lose_modules = [i for i in modules_check_02 if i not in modules_check_01]
     if lose_modules != []:
-        print('Warning lose module file ..... :', lose_modules)
+        print('Warning lose module file ..... :', lose_modules,'.yang')
     for k,_ in modules.items():
         utils.remove_stmt(modules[k],remove_node)        
 
@@ -933,22 +956,20 @@ def yang_stmt_node(w_dir):
 # start augment_stmt
     print('Starting augment-stmt analysis ......')
     for k,_ in modules.items():
-        augment_stmt_syntax_local(modules[k],k)
+        augment_descendant_syntax(modules[k],k)
     global augment_list
     augment_list = []
     for k,_ in modules.items():
-        get_augment_stmt_syntax(modules[k])
+        augment_stmt_node(modules[k])
     augment_stmt_syntax()    
+
+    for k,_ in modules.items():
+        utils.preorder_add_parents_no_augment(modules[k])
 
 # start path-stmt
     print('Starting path-stmt analysis ......')
     for k,_ in modules.items():
         path_stmt_syntax(modules[k],k)  
-
-
-    for k,_ in modules.items():
-        utils.preorder_add_parents_no_augment(modules[k])
-        
 
 # Start every node add path ...
     print('Strat every node add path like /a/b/c/d......')
@@ -978,6 +999,7 @@ if __name__ == '__main__':
 #    yang_module = yang_stmt_node('/home/wang/source/test_ply/ChinaTeleCom/')
 #    yang_module = yang_stmt_node('/home/wang/source/test_ply/optical-transport/')
 #    yang_module = yang_stmt_node('/home/wang/source/test_ply/ZTE/')
+    sys.setrecursionlimit(3000)
     if len(sys.argv) == 1:
         try:
             f = open('yang_modules','rb')
@@ -986,17 +1008,17 @@ if __name__ == '__main__':
             print('Please input yang file directory ! [Error]:',e)
             exit()
     elif len(sys.argv) == 2:
-        try:
-            yang_dir = sys.argv[1]
-            yang_module = yang_stmt_node(yang_dir)
-        except Exception as e:
-            print('Please input yang file directory like /a/b/c/ ! [Error directory]:',e)
-            exit()
+#        try:
+        yang_dir = sys.argv[1]
+        yang_module = yang_stmt_node(yang_dir)
+#        except Exception as e:
+#            print('Please input yang file directory like /a/b/c/ ! [Error directory]:',e)
+#            exit()
     signal.signal(signal.SIGINT, handler)
     signal.signal(signal.SIGTERM, handler)            
     while True:
         module_name_list = list(yang_module[2].keys())
-        print('Choice Modeule Name:',module_name_list)
+        print('Choice Modeule:',module_name_list)
         try:
             module_name = input('module >')
         except Exception as e:
@@ -1081,6 +1103,7 @@ if __name__ == '__main__':
                     ret_node_tree = ret_tp
                 path_path = ret_node_tree.path
                 continue
+            # example find(leaf is-login-anytime)
             if re.match(r'find\([_A-Za-z][._\-A-Za-z0-9]* [_A-Za-z][._\-A-Za-z0-9]*\)',xml_path):
                 ret_node_tree.find_child_by_name(xml_path.replace('find','').replace('(','').replace(')','').strip())
                 continue
