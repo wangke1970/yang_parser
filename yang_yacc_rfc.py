@@ -102,8 +102,8 @@ class node:
             else:
                 break
         return self.leaf
-
-"""                
+"""
+                
     # augment include case choice stmt      
     def node_path_list_augment(self):
         l = []
@@ -319,18 +319,15 @@ def yang_parser():
         p[2] = p[2].replace('\"','').replace("\'",'')
         include_file.append(p[2])
     
-
-#    def p_namespace_stmt(p):
-#        """namespace_stmt : NAMESPACE nsString ';'
-#                          | NAMESPACE uri ';'
-#        """
-#        
-#        p[0] = node(p[1],p[2])
     def p_namespace_stmt(p):
         """namespace_stmt : ns ';'
+                          | NAMESPACE string ';'
         """
-        s = p[1].replace('namespace','').replace('"','').replace("'",'').replace(' ','').replace('\t','').replace('\n','').replace('\r','')
-        p[0] = node('namespace',s)
+        if p[2]==';':
+            s = p[1].replace('namespace','').replace('"','').replace("'",'').replace(' ','').replace('\t','').replace('\n','').replace('\r','')
+            p[0] = node('namespace',s)
+        else:
+            p[0] = node(p[1],p[2])
     
     def p_prefix_stmt(p):
         """prefix_stmt : PREFIX string ';'
@@ -374,18 +371,22 @@ def yang_parser():
         """    
         p[0] = node(p[1],p[2])
     
-    def p_units_stmt(p):
-        """units_stmt : UNITS string ';'
-                      | UNITS identifier ';'
-                      | UNITS descendant_schema_nodeid ';'
-        """
-        p[0] = node(p[1],p[2])
-
 #    def p_units_stmt(p):
-#        """units_stmt : units ';'
+#        """units_stmt : UNITS string ';'
+#                      | UNITS identifier ';'
+#                      | UNITS descendant_schema_nodeid ';'
 #        """
-#        s = p[1].replace('units','').replace('"','').replace("'",'').replace(' ','').replace('\t','').replace('\n','').replace('\r','')
-#        p[0] = node('units',s)
+#        p[0] = node(p[1],p[2])
+
+    def p_units_stmt(p):
+        """units_stmt : xxxunits
+                      | UNITS string ';'
+        """
+        if len(p)==4:
+            p[0] = node(p[1],p[2])
+        else:    
+            s = p[1].replace('units','').replace('"','').replace("'",'').replace(' ','').replace('\t','').replace('\n','').replace('\r','').replace(';','')
+            p[0] = node('units',s)
 
 
     def p_revision_stmt(p):
@@ -589,40 +590,52 @@ def yang_parser():
         p[0] = node(p[1],p[2])                
         
 
-#    def p_default_stmt(p):
-#        """default_stmt : default ';'
-#        """
-#        s = p[1].replace('default','').replace('"','').replace("'",'').replace(' ','').replace('\t','')
-#        p[0] = node('default',s)
-    
     def p_default_stmt(p):
-        """default_stmt : DEFAULT string ';'
-                        | DEFAULT identifier ';'
+        """default_stmt : xxxdefault
+                        | DEFAULT string ';'
         """
-        p[0] = node(p[1],p[2])        
-              
-#    def p_enum_stmt(p):
-#        """enum_stmt : enum ';'
-#                     | enum block
-     
-#        """
-#        s = p[1].replace('enum','').replace('"','').replace("'",'').replace(' ','').replace('\t','')
-#        if p[2] == ';':
-#            p[0] = node('enum',s)
-#        else:
-#            p[0] = node('enum',s,p[2])
+        if len(p)==4:
+            p[0] = node(p[1],p[2])
+        else:    
+            s = p[1].replace('default','').replace('"','').replace("'",'').replace(' ','').replace('\t','').replace('\n','').replace('\r','').replace(';','')
+            p[0] = node('default',s)
     
+#    def p_default_stmt(p):
+#        """default_stmt : DEFAULT string ';'
+#                        | DEFAULT identifier ';'
+#        """
+#        p[0] = node(p[1],p[2])        
+              
     def p_enum_stmt(p):
-        """enum_stmt : ENUM string ';'
+        """enum_stmt : xxxenum ';'
+                     | xxxenum block
+                     | ENUM string ';'
                      | ENUM string block
-                     | ENUM identifier ';'
-                     | ENUM identifier block
      
         """
-        if p[3] == ';':
+        if len(p)==3:
+            s = p[1].replace('enum','').replace('"','').replace("'",'').replace(' ','').replace('\t','')
+            if p[2]==';':
+                p[0] = node('enum',s)
+            else:    
+                p[0] = node('enum',s,p[2])
+        elif p[3]==';':
             p[0] = node(p[1],p[2])
         else:
-            p[0] = node(p[1],p[2],p[3])                 
+            p[0] = node(p[1],p[2],p[3])
+            
+    
+#    def p_enum_stmt(p):
+#        """enum_stmt : ENUM string ';'
+#                     | ENUM string block
+#                     | ENUM identifier ';'
+#                     | ENUM identifier block
+#     
+#        """
+#        if p[3] == ';':
+#            p[0] = node(p[1],p[2])
+#        else:
+#            p[0] = node(p[1],p[2],p[3])                 
     
     def p_range_stmt(p):
         """range_stmt : RANGE range_arg_str ';'
@@ -699,6 +712,7 @@ def yang_parser():
     
     def p_status_stmt(p):
         """status_stmt : STATUS status_arg_str ';'
+                       | STATUS status_arg_str '{' identifier identifier ';' '}'
         """
         p[0] = node(p[1],p[2])
     
@@ -1040,7 +1054,7 @@ def yang_parser():
     def p_identifier(p):
         """identifier : ID
                       | keyword
-        """
+        """       
         p[0] = p[1]
         
     def p_keyword(p):
@@ -1228,7 +1242,7 @@ def get_yang_object(file):
     return result.leaf,module_submodule
 
 if __name__ == '__main__':
-    d = get_yang_object('/home/wang/source/test_ply/ZTE/zxr10-interface-oc@2020-08-11.yang')
+    d = get_yang_object('/home/wang/source/test_ply/M6000_V5.00.10-5.6.0/zxr10-netconf-defs@2019-07-16.yang')
     print('aaa')
     
     
