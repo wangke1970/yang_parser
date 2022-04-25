@@ -45,18 +45,20 @@ reserved = dict(reserved,**keyword_map)
             
 #tokens = ['NUMBER', 'STRING','ID','ABSOLUTE_SCHEMA_NODEID','ns','units','default','contact','enum'] + list(reserved.values())        
 #tokens = ['NUMBER', 'STRING','ID','ABSOLUTE_SCHEMA_NODEID','ns','DATE'] + list(reserved.values()) 
-tokens = ['STRING','ID','ABSOLUTE_SCHEMA_NODEID','ns'] + list(reserved.values()) 
+tokens = ['STRING','ID','ABSOLUTE_SCHEMA_NODEID','ns','xxxdefault','xxxunits','xxxenum'] + list(reserved.values()) 
 
 
 literals = ['{', '}', ';', '(', ')', '.', '+', '|']
 
 def yang_lexer():
 
-    prefix = r'[_A-Za-z0-9\-%][._\-A-Za-z0-9\|\+]*'
+    prefix_ad = r'[_A-Za-z0-9\-%][._\-A-Za-z0-9\|\+]*'
+    prefix = r'[_A-Za-z0-9][A-Za-z0-9._-]*'
+
 #    identifier = r'(?:(' + prefix + r'):)?(?:' + prefix + r')'
     identifier = r'((' + prefix + r'):)?(' + prefix + r')'
+    identifier_ad = r'((' + prefix_ad + r'):)?(' + prefix_ad + r')'
     absolute_schema_nodeid = r"(/" + identifier + r")+"
-#    unit_schema = identifier + r'/' + identifier
     
     t_ignore = ' \t'
     
@@ -67,7 +69,7 @@ def yang_lexer():
     string_double_quote = r'\"([^"\\]|\\.)*\"'
     string_single_quote = r"\'([^'\\]|\\.)*\'"
     string_yang = r'(' + string_double_quote + r'|' + string_single_quote + r')'
-        
+
     date = r'[1-2][0-9]{3}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])'
 
     # URI - RFC 3986, Appendix A
@@ -112,39 +114,61 @@ def yang_lexer():
     uri = (scheme + ":" + hier_part + r"(\?" + query + ")?" +
            "(\#" + fragment + ")?")
     
-    ns_uri = r'namespace\s+' + '(' + uri + '|' + string_yang +')'
+    mac_address = r"([0-9a-fA-F]{2,2}:){5,5}[0-9a-fA-F]{2,2}"
+#    ns_uri = r'namespace\s+' + '(' + uri + '|' + string_yang +')'
+    ns_uri = r'namespace\s+' + uri
+    no_quote_description = r'description\s+' + r"[^;'{" + r'"]' + r'+;'
+    no_quote_contact = r'contact\s+[^;{"' + r"']+;"
+    no_quote_default = r'default\s+[^;{"' + r"']+;"
+    no_quote_enum = r'enum\s+[^;{"' + r"']+(?=[;{])"
+    no_quote_units = r'units\s+[^;{"' + r"']+;"
+   
+    file_directory = absolute_schema_nodeid + r'/'
+    
+    time_interval = r'([0-9][0-9]):([0-5][0-9]):([0-5][0-9])+(\.[0-9]+)'
+    
+    other_id_1 = r'[_A-Za-z0-9][A-Za-z0-9._-]*/[_A-Za-z0-9][A-Za-z0-9._-]*'
+    other_id_2 = r'[_A-Za-z0-9][A-Za-z0-9._-]*\^[_A-Za-z0-9][A-Za-z0-9._-]*'
+    other_id_3 = r'[_A-Za-z0-9][A-Za-z0-9._-]*&[_A-Za-z0-9][A-Za-z0-9._-]*'
+    other_id_4 = r'[_A-Za-z0-9][A-Za-z0-9._-]*%[_A-Za-z0-9][A-Za-z0-9._-]*'
+    other_id_5 = r'\*'
+    other_id_6 = r'\^'
+    other_id_7 = r'[_A-Za-z0-9][A-Za-z0-9._-]*/|[_A-Za-z0-9][A-Za-z0-9._-]*'
+    other_id_8 = r'[_A-Za-z0-9][A-Za-z0-9._-]*'
+    additional_identifier = ipv6address + r'|' + ipv4address + r'|' + mac_address + r'|' + time_interval + r'|' + other_id_1 + r'|' + other_id_2 + \
+                             r'|' + other_id_3 + r'|' + other_id_4 + r'|' + other_id_5 + r'|' + other_id_6 + r'|' + other_id_7 + r'|' + other_id_8 
+
     @TOKEN(ns_uri)
     def t_ns(t):
         t.lexer.lineno += t.value.count('\n')
         return t
-    
-#    def t_description(t):
-#        r'description\s+[^\{]+?(?=;)'
-#        t.lexer.lineno += t.value.count('\n')
-#        return t
-    
-#    def t_units(t):
-#        r'units\s+[^;]*'       
-#        t.lexer.lineno += t.value.count('\n')
-#        return t
-    
-#    def t_default(t):
-#        r'default\s+[^;]*'
-#        t.lexer.lineno += t.value.count('\n')
-#        return t
-    
-#    def t_contact(t):
-#        r'contact\s+[^\{]+?(?=;)'
-#        r'contact(.+(?=;))+?'
-#        t.lexer.lineno += t.value.count('\n')
-#        return t
-    
-#    def t_enum(t):
-#        r'enum\s+[^;{]*'
-#        t.lexer.lineno += t.value.count('\n')
-#        return t
 
+    @TOKEN(no_quote_description)    
+    def t_xxxdescription(t):
+        t.lexer.lineno += t.value.count('\n')
+        pass
+
+    @TOKEN(no_quote_contact)    
+    def t_xxxcontact(t):
+        t.lexer.lineno += t.value.count('\n')
+        pass   
+
+    @TOKEN(no_quote_default)
+    def t_xxxdefault(t):
+        t.lexer.lineno += t.value.count('\n')
+        return t
     
+    @TOKEN(no_quote_units)
+    def t_xxxunits(t):
+        t.lexer.lineno += t.value.count('\n')
+        return t
+    
+    @TOKEN(no_quote_enum)
+    def t_xxxenum(t):
+        t.lexer.lineno += t.value.count('\n')
+        return t
+    
+
     def t_line_terminaror(t):
         r'[\n\r]+'
         t.lexer.lineno += t.value.count('\n')
@@ -158,27 +182,9 @@ def yang_lexer():
         print(msg)
         t.lexer.skip(1)
             
-#    def t_newline(t):
-#        r'\n+'
-#        t.lexer.lineno += len(t.value)
-
-
-#    @TOKEN(unit_schema)
-#    def t_UNIT_SCHEMA(t):
-#        return t
-
-#    @TOKEN(date)
-#    def t_DATE(t):
-#        return t    
-
 #    @TOKEN(number)
 #    def t_NUMBER(t):
 #        return t
-
-    @TOKEN(identifier)
-    def t_ID(t):
-        t.type = reserved.get(t.value, "ID")
-        return t
 
     @TOKEN(absolute_schema_nodeid)
     def t_ABSOLUTE_SCHEMA_NODEID(t):
@@ -191,8 +197,16 @@ def yang_lexer():
         t.lexer.lineno += t.value.count('\n')
         t.value = t.value.replace('\n', '')
         t.value = t.value.replace('\r', '')
-#        t.value = t.value.replace(',', ' ')
         return t    
+    
+    @TOKEN(identifier_ad +'|'+identifier)
+    def t_ID(t):
+        t.type = reserved.get(t.value, "ID")
+        return t
+
+#    @TOKEN(additional_identifier)
+#    def t_other(t):
+#        return t
 
     lexer = lex.lex()
 #    lexer = lex.lex(debug=True)    
@@ -209,10 +223,11 @@ def read_file_as_str(file_path):
 if __name__ == '__main__':    
     lexer = yang_lexer()
     
-#    data = read_file_as_str('/home/wang/source/test_ply/HUAWEI/huawei-bfd-static-mpls-te.yang')
-    data = read_file_as_str('/home/wang/source/test_ply/ZTE/zxr10-iccp@2019-07-03.yang')
+#    data = read_file_as_str('/home/wang/source/test_ply/ChinaTeleCom/ct-collection.yang')
+#    data = read_file_as_str('/home/wang/source/test_ply/ZTE/zxr10-iccp@2019-07-03.yang')
 #    data = read_file_as_str('/home/wang/source/test_ply/bgp/openconfig-bgp-policy.yang')    
 #    data = read_file_as_str('/home/wang/source/test_ply/bbb.yang')
+    data = read_file_as_str('/home/wang/source/test_ply/Huawei_V8R22/huawei-erps@2020-05-26.yang')
     lexer.input(data)    
     while True:
         tok = lexer.token()
